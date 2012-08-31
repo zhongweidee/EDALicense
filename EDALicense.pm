@@ -69,10 +69,12 @@ package EDALicense
    has 'allowDupFeature', is => 'rw',isa=>'Int';
    sub initWithFileCont($$)
    {
+    DEBUG "start to initWithFileCont";
     my $self=shift;
     my $cont =$_[0];
+    my @lines = grep {(!/^#/)&&(/\w+/)} (split /\n/,$cont);
+    $cont = join ("\n",@lines);
     $self->content($cont);
-    my @lines = grep {!/^#/} (grep {/\w+/} (split /\n/,$cont));
     foreach my $line (@lines){
     if ($line =~/^SERVER\s+\S+\s+(\S+)\s+/i){
                       $self->hostId($1);
@@ -82,6 +84,7 @@ package EDALicense
                       }
                               }
     $self->vender($self->getVenderName($self->content()));
+    DEBUG "end to initWithFileCont";
    }
 
    sub initWithFilePath($$)
@@ -95,7 +98,7 @@ package EDALicense
 
    sub getVenderName($$)
    {
-    my @venderList= qw(arm synopsys springsoft cadence);
+    my @venderList= qw(arm synopsys springsoft cadence mentor);
     my $self =shift;
     my $cont = $_[0];
     foreach(@venderList){
@@ -208,10 +211,10 @@ package ActiveLicense
      $self->lmstatContent($lmstatCont); 
      $self->generateActiveLicenseFeatures($lmstatCont);     
    }
-   sub generateActiveLicenseFeatures($$)
+   sub generateActiveLicenseFeatures($)
    {
           my $self = shift;
-	  my $cont = $_[0];
+	  my $cont = $self->lmstatContent();
 	  my @feaList = map {"Users of".$_}(split /Users\s+of/,$cont);
 	  my @objList;
 	  foreach (@feaList){
@@ -221,10 +224,10 @@ package ActiveLicense
 		            }
 	  return \@objList;
    }
-   sub isAlive($$)
+   sub isAlive($)
    {
      my $self =shift;
-     my $cont =$_[0];	     
+     my $cont =$self->lmstatContent();	     
      if( $cont =~ /Error\s+getting\s+status:/){
 	     return 0;
 	      }
@@ -242,7 +245,7 @@ package ActiveLicenseFeature
    #extends 'EDALicense'; 
    has 'name', is=>'rw',isa=>'Str';
    has 'content', is=>'rw',isa=>'Str';
-   has 'issuedNum', is=>'rw',isa=>'Str';
+   has 'issuedNum', is=>'rw',isa=>'Int';
    has 'usedNum', is=>'rw',isa=>'Int';
    sub initWithStr($$)
    {
@@ -263,3 +266,229 @@ package ActiveLicenseFeature
    no Moose;
    __PACKAGE__->meta->make_immutable;
 }
+
+=pod
+
+=head1 NAME
+
+EDALicense - A License object system for EDA Tools
+
+=head1 VERSION
+
+version 0.01
+
+=head1 SYNOPSIS
+
+  use EDALicense;
+
+  my $licObj=EDALicense->new();
+     $licObj->initWithFileCont($LicCont);
+  my $vender=$licObj->vender();
+
+=head1 DESCRIPTION
+
+EDALicense is an class sets for License of EDA Tools   
+
+use "MOOSE" perl Object system  Module.
+
+Please read some document about "Moose" If you need to understand the Object system of EDALicense
+
+The main goal of EDALicense is to build perl API to License.
+
+EDA tools: like cadence/synopsys/mentor/springsoft/arm ( based on lmgrd/lmdown/lmreread/lm*comand )
+
+Class sets:
+
+1. EDALicense: is based on License file which provided by EDA Vender
+
+2. EDALicenseFeature: is single Feature class which extracted from EDALicense
+   
+   you always don't need to create EDALicenseFeature alone.
+  
+   you always use the array ref from EDALicense's generateLicenseFeatures 
+
+3. ActiveLicense: is based on lmstat command result
+
+4. ActiveLicenseFeature: is single Feature class which extracted form Active License
+
+=head2 EDALicense's attribute
+
+=head3 name()
+
+   rw,Str
+
+=head3 content()
+
+   rw,Str
+
+=head3 hostId()
+
+   rw,Str
+  
+=head3 vender()
+ 
+   rw,Str
+
+=head3 demon()
+  
+   rw,Str (not support)
+
+=head3 alllowDupFeature
+ 
+   rw,Int (only allow 0 or 1 , 0 is not allow ,1 is allow)
+ 
+   used for the license file contain same featurename but different feature expired Time.
+ 
+   if you set 0,will delete the older expiredTime objects;
+
+   effect the return vaule of the method generateLicenseFeatures
+
+=head2 EDALicense's method
+
+=head3 new()
+
+you must do new(), and with one init method
+
+for example:
+
+   my $licObj=EDALicense->new();
+
+      $licObj->initWithFileCont($preLicCont);
+
+my $licObj=EDALicense->new();
+
+=head3 initWithFileCont(a) 
+
+a is the string of LicenseFile content
+
+=head3 initWithFilePath(a) 
+
+a is the string of LicenseFile path
+
+=head3 getVenderName() 
+
+this method is to find the vendername in licenseFile.
+
+only support: arm/synopsys/mentor/cadence
+
+=head3 generateLicenseFeatures() 
+ 
+this method is to generate a array ref of EDALicenseFeature object
+
+=head2 EDALicenseFeature'attribute
+
+
+=head3 name()
+
+   rw,Str
+
+=head3 content()
+
+   rw,Str
+
+=head3 hostId()
+
+   rw,Str
+  
+=head3 vender()
+ 
+   rw,Str
+
+=head3 demon()
+
+   rw,Str (not support)
+
+=head3 version()
+
+   rw,Str (not support)
+
+=head3 expiredDate()
+
+   rw,Str
+
+=head3 num()
+
+   rw,Int
+
+=head2 EDALicenseFeature's method
+
+=head3 new()
+
+   you always don't need to create EDALicenseFeature alone.
+  
+   you always use the array ref from EDALicense's generateLicenseFeatures 
+
+=head3 isSameAsFeaObj(a)
+   
+    a is a object of LicenseFeature which need to be compared
+
+    if same, return 1;
+
+    if not same, return 0;
+
+=head2 ActiveLicense's atrribute
+
+=head3 lmstatContent()
+     
+    rw,Str
+
+=head3 alive()
+     
+    rw,Int
+
+=head3 licenseFile()
+    
+    rw,EDALicense object
+
+=head3 ActiveLicenseFeatures()
+
+    rw, ArrayRef[ActiveLicenseFeature] (not support)
+
+=head2 ActiveLicense's method
+
+=head3 initWithLmstatResult(a)
+
+     a is the command result of lmstat -a -c 
+
+=head3 generateActiveLicenseFeatures()
+
+     return array ref
+
+=head3 isAlive()
+     return 0 or 1
+
+=head2 ActiveLicenseFeature's atrribute
+
+=head3 name()
+
+rw Str
+
+=head3 content()
+
+rw Str
+
+=head3 issuedNum()
+
+rw Int
+
+=head3 usedNum()
+
+rw Int
+
+=head2 AcitveLicenseFeature's method
+
+=head3 new()
+
+=head3 initWithStr(a)
+
+=head1 AUTHOR
+
+EDALicense is developed and maintained by Wei.Zhong
+
+any question, please contact with fanasyiszhongwei@gmail.com
+
+=head1 COPYRIGHT AND LICENSE
+
+=cut
+
+__END__
