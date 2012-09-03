@@ -1,0 +1,12 @@
+Changes
+lib/FLEXlm/ActiveEDALicense.pm
+lib/FLEXlm/ActiveEDALicenseFeature.pm
+lib/FLEXlm/EDALicense.pm
+lib/FLEXlm/EDALicenseFeature.pm
+Makefile.PL
+MANIFEST			This list of files
+README
+t/00-load.t
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
